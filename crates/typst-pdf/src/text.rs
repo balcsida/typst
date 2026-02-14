@@ -2,8 +2,10 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use bytemuck::TransparentWrapper;
+use krilla::geom::PathBuilder;
 use krilla::surface::{Location, Surface};
 use krilla::text::GlyphId;
+use ttf_parser::OutlineBuilder;
 use typst_library::diag::{SourceResult, bail};
 use typst_library::layout::Size;
 use typst_library::text::{Font, Glyph, TextItem};
@@ -25,7 +27,6 @@ pub(crate) fn handle_text(
     let mut handle = tags::text(gc, fc, surface, t);
     let surface = handle.surface();
 
-    let font = convert_font(gc, t.font.clone())?;
     let fill = paint::convert_fill(
         gc,
         &t.fill,
@@ -43,24 +44,112 @@ pub(crate) fn handle_text(
         } else {
             None
         };
-    let text = t.text.as_str();
-    let size = t.size;
-    let glyphs: &[PdfGlyph] = TransparentWrapper::wrap_slice(t.glyphs.as_slice());
 
     surface.push_transform(&fc.state().transform().to_krilla());
     let mut surface = defer(surface, |s| s.pop());
     surface.set_fill(Some(fill));
     surface.set_stroke(stroke);
-    surface.draw_glyphs(
-        krilla::geom::Point::from_xy(0.0, 0.0),
-        glyphs,
-        font.clone(),
-        text,
-        size.to_f32(),
-        false,
-    );
+
+    if gc.options.embed_fonts {
+        let font = convert_font(gc, t.font.clone())?;
+        let text = t.text.as_str();
+        let size = t.size;
+        let glyphs: &[PdfGlyph] =
+            TransparentWrapper::wrap_slice(t.glyphs.as_slice());
+
+        surface.draw_glyphs(
+            krilla::geom::Point::from_xy(0.0, 0.0),
+            glyphs,
+            font.clone(),
+            text,
+            size.to_f32(),
+            false,
+        );
+    } else {
+        draw_glyphs_as_outlines(&mut surface, t)?;
+    }
 
     Ok(())
+}
+
+/// Draws text glyphs as outlined vector paths instead of embedding font data.
+/// Each glyph outline is extracted from the font's glyph tables and rendered
+/// as a filled path. This avoids embedding the font in the PDF but makes
+/// the text non-selectable and non-searchable.
+fn draw_glyphs_as_outlines(
+    surface: &mut Surface,
+    t: &TextItem,
+) -> SourceResult<()> {
+    let font = &t.font;
+    let size = t.size.to_f32();
+    let upem = font.units_per_em() as f32;
+    let scale = size / upem;
+
+    let mut x_offset = 0.0f32;
+
+    for glyph in t.glyphs.iter() {
+        let glyph_id = ttf_parser::GlyphId(glyph.id);
+        let dx = x_offset + glyph.x_offset.get() as f32 * size;
+        let dy = glyph.y_offset.get() as f32 * size;
+
+        let mut builder = KrillaOutlineBuilder::new();
+        let has_outline = font.ttf().outline_glyph(glyph_id, &mut builder);
+
+        if has_outline.is_some() {
+            if let Some(path) = builder.finish() {
+                // Font coordinates are Y-up; PDF is Y-down, so flip Y.
+                // Apply scale and translation for glyph position.
+                let transform = krilla::geom::Transform::from_row(
+                    scale, 0.0, 0.0, -scale, dx, dy,
+                );
+                if let Some(path) = path.transform(transform) {
+                    surface.draw_path(&path);
+                }
+            }
+        }
+
+        x_offset += glyph.x_advance.get() as f32 * size;
+    }
+
+    Ok(())
+}
+
+/// An adapter that implements `ttf_parser::OutlineBuilder` by forwarding
+/// path commands to krilla's `PathBuilder`.
+struct KrillaOutlineBuilder {
+    builder: PathBuilder,
+}
+
+impl KrillaOutlineBuilder {
+    fn new() -> Self {
+        Self { builder: PathBuilder::new() }
+    }
+
+    fn finish(self) -> Option<krilla::geom::Path> {
+        self.builder.finish()
+    }
+}
+
+impl OutlineBuilder for KrillaOutlineBuilder {
+    fn move_to(&mut self, x: f32, y: f32) {
+        self.builder.move_to(x, y);
+    }
+
+    fn line_to(&mut self, x: f32, y: f32) {
+        self.builder.line_to(x, y);
+    }
+
+    fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
+        self.builder.quad_to(x1, y1, x, y);
+    }
+
+    fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
+        self.builder.cubic_to(x1, y1, x2, y2, x, y);
+    }
+
+    fn close(&mut self) {
+        self.builder.close();
+    }
 }
 
 fn convert_font(

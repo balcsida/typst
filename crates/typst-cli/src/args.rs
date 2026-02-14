@@ -344,6 +344,14 @@ pub struct CompileArgs {
     #[arg(long = "no-pdf-tags")]
     pub no_pdf_tags: bool,
 
+    /// Prevents fonts from being embedded in the PDF. Instead, text is
+    /// converted to outlined vector paths. This can be useful for complying
+    /// with font licenses that prohibit embedding.
+    ///
+    /// Note that this makes text in the PDF non-selectable and non-searchable.
+    #[arg(long = "no-embed-fonts")]
+    pub no_embed_fonts: bool,
+
     /// The PPI (pixels per inch) to use for PNG export.
     #[arg(long = "ppi", default_value_t = 144.0)]
     pub ppi: f32,

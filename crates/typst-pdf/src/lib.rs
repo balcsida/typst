@@ -60,6 +60,11 @@ pub struct PdfOptions<'a> {
     /// circumstances, for example when trying to reduce the size of a document,
     /// it can be desirable to disable tagged PDF.
     pub tagged: bool,
+    /// Whether to embed fonts in the PDF. When set to `false`, text is
+    /// converted to outlined vector paths instead of embedding font data.
+    /// This can be useful for complying with font licenses that prohibit
+    /// embedding. Note that this makes text non-selectable and non-searchable.
+    pub embed_fonts: bool,
 }
 
 impl PdfOptions<'_> {
@@ -78,6 +83,7 @@ impl Default for PdfOptions<'_> {
             page_ranges: None,
             standards: PdfStandards::default(),
             tagged: true,
+            embed_fonts: true,
         }
     }
 }
