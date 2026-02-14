@@ -61,6 +61,7 @@ pub fn convert(
         enable_tagging: options.tagged,
         render_svg_glyph_fn: render_svg_glyph,
         pretty: options.pretty,
+        no_embed_fonts: options.no_embed_fonts,
     };
 
     let mut document = Document::new_with(settings);
@@ -834,6 +835,11 @@ fn convert_error(
                     ))
             }
         }
+        ValidationError::FontsNotEmbedded => error!(
+            Span::detached(),
+            "{prefix} fonts are not embedded but the selected standard requires it";
+            hint: "remove --no-embed-fonts when exporting with PDF/A standards";
+        ),
     }
 }
 

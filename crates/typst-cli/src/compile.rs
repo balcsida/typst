@@ -74,6 +74,8 @@ pub struct CompileConfig {
     pub pdf_standards: PdfStandards,
     /// Whether to write PDF (accessibility) tags.
     pub tagged: bool,
+    /// Whether to skip font embedding in PDF output.
+    pub no_embed_fonts: bool,
     /// A destination to write a list of dependencies to.
     pub deps: Option<Output>,
     /// The format to use for dependencies.
@@ -231,6 +233,7 @@ impl CompileConfig {
             pages,
             pdf_standards,
             tagged,
+            no_embed_fonts: args.no_embed_fonts,
             creation_timestamp: args
                 .world
                 .creation_timestamp
@@ -621,6 +624,7 @@ fn pdf_options(config: &CompileConfig) -> PdfOptions {
         standards: config.pdf_standards.clone(),
         tagged: config.tagged,
         pretty: config.pretty,
+        no_embed_fonts: config.no_embed_fonts,
     }
 }
 

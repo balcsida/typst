@@ -86,6 +86,11 @@ pub struct PdfOptions {
     pub tagged: bool,
     /// Whether to format the PDF in a human-readable way.
     pub pretty: bool,
+    /// When `true`, font programs will not be embedded in the PDF output.
+    /// Font descriptors and metrics are still written so text remains
+    /// selectable. This reduces file size but requires viewers to have
+    /// the fonts installed locally. Incompatible with PDF/A standards.
+    pub no_embed_fonts: bool,
 }
 
 impl PdfOptions {
@@ -106,6 +111,7 @@ impl Default for PdfOptions {
             standards: PdfStandards::default(),
             tagged: true,
             pretty: false,
+            no_embed_fonts: false,
         }
     }
 }
