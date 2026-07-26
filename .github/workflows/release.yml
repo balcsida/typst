@@ -3,12 +3,24 @@
 
 name: Create Release Assets
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*-no-embed-fonts.*"
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$GITHUB_REF_NAME" --notes "Typst fork with --no-embed-fonts support."
+
   build-binaries:
     name: Build ${{ matrix.target }} binary
+    needs: create-release
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
@@ -89,8 +101,35 @@ jobs:
           VERSION="${{ github.ref_name }}"
           gh release upload "$VERSION" "$ARCHIVE"
 
+  checksum-binaries:
+    name: Create binary checksums
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download binary archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir release-assets
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern "typst-*.tar.xz" --pattern "typst-*.zip" --dir release-assets
+
+      - name: Create and upload checksums
+        working-directory: release-assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -d '' ARCHIVES < <(find . -maxdepth 1 -type f \( -name "*.tar.xz" -o -name "*.zip" \) -print0)
+          test "${#ARCHIVES[@]}" -eq 8
+          for ARCHIVE in "${ARCHIVES[@]}"; do
+            sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
+          done
+          gh release upload "$GITHUB_REF_NAME" ./*.sha256 --repo "$GITHUB_REPOSITORY"
+
   build-docs:
     name: Build documentation (PDF)
+    needs: create-release
     runs-on: ubuntu-latest
     permissions:
       contents: write
