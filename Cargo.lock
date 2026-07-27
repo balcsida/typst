@@ -1485,7 +1485,7 @@ dependencies = [
 [[package]]
 name = "krilla"
 version = "0.8.2"
-source = "git+https://github.com/balcsida/krilla?rev=a9da58822b372ad467b81891d8cc7c0bd5967d84#a9da58822b372ad467b81891d8cc7c0bd5967d84"
+source = "git+https://github.com/balcsida/krilla?rev=54ff37b56e37eb5b348c61cf27d49f78371062c5#54ff37b56e37eb5b348c61cf27d49f78371062c5"
 dependencies = [
  "base64",
  "bumpalo",
@@ -1515,7 +1515,7 @@ dependencies = [
 [[package]]
 name = "krilla-svg"
 version = "0.8.1"
-source = "git+https://github.com/balcsida/krilla?rev=a9da58822b372ad467b81891d8cc7c0bd5967d84#a9da58822b372ad467b81891d8cc7c0bd5967d84"
+source = "git+https://github.com/balcsida/krilla?rev=54ff37b56e37eb5b348c61cf27d49f78371062c5#54ff37b56e37eb5b348c61cf27d49f78371062c5"
 dependencies = [
  "flate2",
  "fontdb",
@@ -2305,9 +2305,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.5.8"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03a862b389f93e68874fbf580b9de08dd02facb9a788ebadaf4a3fd33cf58834"
+checksum = "469052894dcb553421e483e4209ee581a45100d31b4018de03e5a7ad86374a7e"
 dependencies = [
  "bitflags 2.11.1",
 ]
